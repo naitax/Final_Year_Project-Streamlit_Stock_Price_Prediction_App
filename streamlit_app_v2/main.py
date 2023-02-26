@@ -150,7 +150,7 @@ def prediction_plot(prediction_data, test_data, symbol):
     st.markdown('')
     st.write(f"Predicted Price vs Actual Close Price Results for {symbol}")
     st.write(test_data[['Date', 'Close', 'Predicted']])
-    st.write("Plotting Close Price vs Predicted Price for - ", models)
+    st.write(f"Plotting Close Price vs Predicted Price for - {symbol}")
 
     # Plotting the Graph
     fig = go.Figure()
@@ -337,9 +337,16 @@ with stock_info:
     history_1mo= stock.stock_information()[0]
     splits = stock.stock_information()[1]
     ticker = stock.ticker()
-    
+    major_holders = ticker.major_holders
+    major_holders.rename(columns={0: 'Percentage', 1: 'Holders'}, inplace=True)
     st.write('Company History in the past 1 month', history_1mo)
-    st.write('Splits', splits)
+    st.markdown('**Holders**')
+    st.write(f'Major Holders' ,major_holders)
+    st.write(f'Institutional Holders' ,ticker.institutional_holders)
+    st.write(f'Mutual Holders' ,ticker.mutualfund_holders)
+    st.markdown('**Earnings**')
+    st.write(f'Earnings Dates' ,ticker.earnings_dates)
+
 
 
 

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import math
-import seaborn as sns
+
 import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
@@ -15,15 +15,15 @@ class Linear_Regression:
         self.data = data
         self.test_size = test_size
 
-    def clean_data(self):
-        self.data['Date'] = pd.to_datetime(self.data['Date']).dt.date
-        return data
+    # def clean_data(self):
+    #     self.data['Date'] = pd.to_datetime(self.data['Date']).dt.date
+    #     return data
 
     def create_train_test_data(self):
-        data = self.clean_data()
-        train_data_len = math.ceil(len(data) * (1 - self.test_size))
-        train_data = data[:train_data_len]
-        test_data = data[train_data_len:]
+        # data = self.clean_data()
+        train_data_len = math.ceil(len(self.data) * (1 - self.test_size))
+        train_data = self.data[:train_data_len]
+        test_data = self.data[train_data_len:]
 
         return train_data, test_data
 
