@@ -81,6 +81,8 @@ class Stock:
         df_ticker = self.ticker()
         numeric_df = data.select_dtypes(['float', 'int'])
         cust_data = data[choice]
+
+
         plotly_figure = px.line(data_frame=cust_data, x=data['Date'], y=choice,
                                 title=f'')
 
