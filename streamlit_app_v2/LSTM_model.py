@@ -287,6 +287,13 @@ def get_final_df(model, data, LOOKUP_STEP):
                                     final_df[f"true_adjclose_{LOOKUP_STEP}"])
                                     # since we don't have profit for last sequence, add 0's
                                     )
+
+    # loss, mae = model.evaluate(final_df["X_test"], final_df["y_test"], verbose=0)
+    # # calculate the mean absolute error (inverse scaling)
+    # if SCALE:
+    #     mean_absolute_error = final_df["column_scaler"]["adjclose"].inverse_transform([[mae]])[0][0]
+    # else:
+    #     mean_absolute_error = mae
     return final_df
 
 
@@ -309,6 +316,8 @@ def predict(model, data, N_STEPS):
         else:
             predicted = prediction[0][0]
         predicted_price.append(predicted)
+
+
 
     return predicted_price
 
