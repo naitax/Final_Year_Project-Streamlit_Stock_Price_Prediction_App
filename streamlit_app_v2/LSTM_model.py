@@ -116,7 +116,7 @@ def load_data(ticker, start, end, n_steps, lookup_step, test_size, scale=True, s
     # make sure that the passed feature_columns exist in the dataframe
     for col in feature_columns:
         assert col in df.columns, f"'{col}' does not exist in the dataframe."
-    # add date as a column
+    # add date as a column if does not exist
     if "date" not in df.columns:
         df["date"] = df.index
     if scale:

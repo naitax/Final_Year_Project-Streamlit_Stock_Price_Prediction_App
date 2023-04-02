@@ -3,6 +3,9 @@ import datetime
 import plotly.express as px
 
 
+# Add validation
+# end date cannot be later than today
+# start date cannot be earlier than 2010
 class Stock:
     """
     This class enables data loading, plotting and statistical analysis of a given stock,
@@ -46,6 +49,37 @@ class Stock:
         history_1mo = ticker.history(period='1mo')
         splits = ticker.splits
         return history_1mo, splits
+
+    def calculate_volatility(self, data):
+
+        # create a column called Log returns with the daily log return of the Close price.
+        data['Log returns'] = np.log(data['Close'] / data['Close'].shift())
+
+        # get standard deviation
+        std = data['Log returns'].std()
+
+        # calculate volatility
+        volatility = std * 252 ** .5
+
+        return volatility
+
+    def visualise_volatility(self, data, volatility, symbol):
+
+        str_vol = str(round(volatility, 4) * 100)
+        fig, ax = plt.subplots()
+        data['Log returns'].hist(ax=ax, bins=50, alpha=0.6, color='b')
+        ax.set_xlabel('Log return')
+        ax.set_ylabel('Freq of log return')
+        ax.set_title(f'{symbol} volatility: {str_vol} %')
+
+
+# e.g
+# symbol = 'AAPL'
+# stock = Stock(symbol)
+# data = stock.load_data('2015-03-01', '2022-01-01')
+# volatility = stock.calculate_volatility(data)
+# stock.visualise_volatility(data, volatility, symbol)
+
 
     def plot_row_data(self, fig, start, end):
         """

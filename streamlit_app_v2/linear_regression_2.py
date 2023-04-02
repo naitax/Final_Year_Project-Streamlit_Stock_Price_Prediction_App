@@ -14,7 +14,6 @@ class Linear_Regression:
 
     def sub_data(self):
         df = pd.DataFrame(self.data, columns=['Close'])
-
         # Reset index column so that we have integers to represent time for later analysis
         df = df.reset_index()
         return df
