@@ -50,8 +50,6 @@ def train_model(ticker, N_STEPS, SCALE, LOOKUP_STEP, TEST_SIZE, FEATURE_COLUMNS,
         mean_absolute_error = data["column_scaler"]["adjclose"].inverse_transform([[mae]])[0][0]
     else:
         mean_absolute_error = mae
-
-
     # some tensorflow callbacks
     # checkpointer = ModelCheckpoint(os.path.join("results", model_name + ".h5"), save_weights_only=True,
     #                                save_best_only=True, verbose=1)
@@ -346,7 +344,7 @@ def streamlit_app():
     if END == '':
         END = YESTERDAY
     # Stock Symbol Selection
-    STOCKS = np.array(['AAPL', 'GOOGL', 'INTC', 'TSLA'])
+    STOCKS = np.array(get_all_ticker_names())
     SYMBOL = sidebar.selectbox('Select Stock', STOCKS)
 
 

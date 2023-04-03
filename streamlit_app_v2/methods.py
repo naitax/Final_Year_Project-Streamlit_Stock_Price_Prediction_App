@@ -1,4 +1,6 @@
 import datetime as dt
+from stocksymbol import StockSymbol
+
 
 def get_today():
     return dt.datetime.now().strftime("%Y-%m-%d")
@@ -25,3 +27,18 @@ def get_model_summary(model):
     summary_string = stream.getvalue()
     stream.close()
     return summary_string
+
+def get_all_ticker_names():
+  api_key = '55af380e-652d-407a-8d08-bea00df715eb'
+
+  ss = StockSymbol(api_key)
+
+  # get symbol list based on market
+  symbol_list_us = ss.get_symbol_list(market="US") # "us" or "america" will also work
+  all_ticker = []
+  for i in range(0, len(symbol_list_us)):
+    all_ticker.append(symbol_list_us[i]['symbol'])
+
+  all_ticker = sorted(all_ticker)
+  return all_ticker
+
