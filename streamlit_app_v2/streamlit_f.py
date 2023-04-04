@@ -17,6 +17,7 @@ from linear_regression_2 import *
 import pandas as pd
 from sklearn.metrics import mean_absolute_percentage_error
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def show_data_table(data, start_date):
@@ -349,7 +350,7 @@ def streamlit_app():
 
 
     #  ------------------------Tabs--------------------
-    plot, stock_data, stock_info = st.tabs(['Plot', 'Stock Data', 'Stock Information'])
+    plot, stock_data, stock_info, stock_analysis = st.tabs(['Plot', 'Stock Data', 'Stock Information', 'Stock Analysis'])
 
     with plot:
 
@@ -404,6 +405,36 @@ def streamlit_app():
         st.markdown('**Earnings**')
         st.write(f'Earnings Dates' ,ticker.earnings_dates)
 
+    with stock_analysis:
+
+        try:
+
+            st.subheader(f'{SYMBOL} Stock Correlation')
+
+            st.write(stock.visualise_correlation(data))
+
+            st.subheader(f'{SYMBOL} Stock Volatility')
+            volatility = stock.calculate_volatility(data)
+            volatility_fig = stock.visualise_volatility(data, volatility, SYMBOL)
+            st.plotly_chart(volatility_fig, use_container_width=True, height=800)
+            #st.write(volatility_fig)
+
+            st.subheader(f'Decomposition of time series')
+            for feature in features_selected:
+                multiplicative, additive = stock.decompose_time_series(data, feature)
+                additive_fig = stock.plot_seasonal_decompose(additive, data, data['Date'], 'Additive', feature)
+                st.write(f'{feature} Additive Seasonal Decomposition')
+                st.plotly_chart(additive_fig, use_container_width=True)
+                #st.write(additive_fig)
+                additive_table = stock.additive_decomposing_table(additive)
+                st.write(f'Additive {SYMBOL} Table Decomposition')
+                st.write(additive_table)
+                multiplicative_fig = stock.plot_seasonal_decompose(multiplicative, data, data['Date'], 'Multiplicative', feature)
+                st.write(f'{feature} Multiplicative Seasonal Decomposition')
+                st.plotly_chart(multiplicative_fig, use_container_width=True)
+                #st.write(multiplicative_fig)
+        except ValueError:
+            st.markdown(':red[Please select a **date range**]')
 
 
 
