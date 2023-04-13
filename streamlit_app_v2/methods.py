@@ -54,11 +54,13 @@ def get_all_ticker_names():
   return all_ticker
 
 
-def save_prediction_models(prediction_model, symbol, start, end, feature, test_size, intercept, mea, mse, rmse, r2):
-    path_to_file = 'lr_models.csv'
-    data_to_append = [prediction_model, symbol, f'{start}-{end}', feature, test_size, intercept, mea, mse, rmse, r2]
-    header_list = ['Prediction Model', 'Stock', 'Date Range', 'Feature', 'Test Size', 'intercept', 'mea', 'mse', 'rmse',
-                   'r2']
+def save_prediction_models(prediction_model, symbol, start, end, feature, test_size, batch_size, epochs, dropout, lookup_step, optimizer, loss, intercept, MAE, MSE, RMSE, R2):
+    path_to_file = 'hyperparameters.csv'
+
+
+    data_to_append = [prediction_model, symbol, f'{start}-{end}', feature, test_size, batch_size, epochs, dropout, lookup_step, optimizer, loss, intercept, MAE, MSE, RMSE, R2]
+    header_list = ['Prediction Model', 'Stock', 'Date Range', 'Feature', 'Test Size', 'Batch Size', 'Epochs', 'Dropout', 'Lookup Step', 'Optimizer', 'Loss', 'intercept', 'MAE', 'MSE', 'RMSE',
+                   'R2']
     if os.path.exists(path_to_file) is False:
         with open(path_to_file, 'w', newline='') as file:
             writer = csv.writer(file)

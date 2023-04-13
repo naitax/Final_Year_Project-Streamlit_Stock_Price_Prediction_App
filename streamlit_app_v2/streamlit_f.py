@@ -18,8 +18,9 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_percentage_error
 import matplotlib.pyplot as plt
 import seaborn as sns
+from keras.utils.vis_utils import plot_model
 
-
+from PIL import Image
 def show_data_table(data, start_date):
     for i in range(0, len(data)):
         if start_date <= pd.to_datetime(data['Date'][i]):
@@ -32,71 +33,53 @@ def show_data_table(data, start_date):
 
 
 # LSTM2
-def train_model(ticker, N_STEPS, SCALE, LOOKUP_STEP, TEST_SIZE, FEATURE_COLUMNS, LOSS, OPTIMIZER, DROPOUT, BATCH_SIZE, EPOCHS, START, END, SYMBOL):
+def train_model(ticker, N_STEPS, SCALE, LOOKUP_STEP, TEST_SIZE, FEATURE_COLUMNS, LOSS, OPTIMIZER, DROPOUT, BATCH_SIZE, EPOCHS, START, END, MODEL_TYPE, N_LAYERS, ACTIVATION, UNITS):
 
 
-    data = load_data(ticker, START, END, N_STEPS, scale=SCALE, split_by_date=False,
-                     shuffle=True, lookup_step=LOOKUP_STEP, test_size=TEST_SIZE)
+    data = load_data(ticker, START, END, N_STEPS, scale=SCALE, lookup_step=LOOKUP_STEP, test_size=TEST_SIZE)
 
+    model = create_model(N_STEPS, len(FEATURE_COLUMNS), N_LAYERS, DROPOUT, LOSS,
+                         OPTIMIZER, MODEL_TYPE, ACTIVATION, UNITS)
 
-
-    # 256 LSTM neurons
-    UNITS = 256
-    model = create_model(N_STEPS, len(FEATURE_COLUMNS), loss=LOSS, units=UNITS, cell=LSTM, n_layers=2,
-                         dropout=DROPOUT, optimizer=OPTIMIZER, bidirectional=True)
-    # loss and mean absolute error
-    loss, mae = model.evaluate(data["X_test"], data["y_test"], verbose=0)
-    # calculate the mean absolute error (inverse scaling)
-    if SCALE:
-        mean_absolute_error = data["column_scaler"]["adjclose"].inverse_transform([[mae]])[0][0]
-    else:
-        mean_absolute_error = mae
-    # some tensorflow callbacks
-    # checkpointer = ModelCheckpoint(os.path.join("results", model_name + ".h5"), save_weights_only=True,
-    #                                save_best_only=True, verbose=1)
-    # tensorboard = TensorBoard(log_dir=os.path.join("logs", model_name))
-
-    # train the model and save the weights whenever we see
-    # a new optimal model using ModelCheckpoint
     history = model.fit(data["X_train"], data["y_train"],
                         batch_size=BATCH_SIZE,
                         epochs=EPOCHS,
                         validation_data=(data["X_test"], data["y_test"]),
                         verbose=1)
 
-    st.success("Your Model is Trained Succesfully!")
-    st.markdown('')
-    final_df = get_final_df(model, data, LOOKUP_STEP)
+    model.save(
+        f'streamlit_app_v2/prediction_models/model_type={MODEL_TYPE},batch_size={BATCH_SIZE},epochs={EPOCHS},dropout={DROPOUT},seq_length={LOOKUP_STEP},optimizer={OPTIMIZER},loss={LOSS}.h5')
 
+    # final dataframe
+    final_df = get_final_df(model, data, LOOKUP_STEP)
+    final_df = final_df.drop('date', axis=1)
+    # evaluation metrics
     y_true = final_df[f'true_adjclose_{LOOKUP_STEP}'].values.tolist()
     y_pred = final_df[f'predicted adjclose_{LOOKUP_STEP}'].values.tolist()
-    mape = mean_absolute_percentage_error(y_true, y_pred)
-    # evaluate the model
-    st.write('Final dataframe with true and predicted prices')
-    st.dataframe(final_df)
+    MAE, MSE, RMSE, R2, RMSE, MAPE = evaluate(model, y_true, y_pred)
+    # future prices for N_STEPS days
     future_price = predict(model, data, N_STEPS)
     predicted_price = pd.DataFrame(future_price)
-
     tomorrow = END + timedelta(days=1)
     predicted_price.rename(columns={0: 'Future Price'})
     predicted_price['Date'] = pd.date_range(start=tomorrow, periods=len(predicted_price), freq='D')
     predicted_price['Date'] = pd.to_datetime(predicted_price['Date']).dt.date
     predicted_price.rename(columns={0: 'Future Adj Close Price'}, inplace=True)
-
-    st.write(f'Prices for the next {LOOKUP_STEP} days')
-    st.dataframe(predicted_price)
-
     # plot for future prediction
-    # Plotting the Graph
     fig_predicted = go.Figure()
     fig_predicted.add_trace(go.Scatter(x=predicted_price['Date'], y=predicted_price['Future Adj Close Price'], mode='lines', name='Future Adj Close Price'))
-    # fig_predicted.add_trace(go.Scatter(x=test_data['Date'], y=test_data['Predicted'], mode='lines', name='Predicted'))
     fig_predicted.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01), height=550, width=1000,
                       autosize=False, margin=dict(l=25, r=75, b=100, t=0))
 
-    st.plotly_chart(fig_predicted)
-    final_df = final_df[final_df.index > '2010-01-01']
-    plot = plot_graph(final_df, LOOKUP_STEP, SYMBOL)
+    st.success("Your Model is Trained Succesfully!")
+    st.markdown('')
+    st.write('Final dataframe with true and predicted prices')
+    st.dataframe(final_df)
+    st.write(f'Prices for the next {N_STEPS} days')
+    st.dataframe(predicted_price)
+    # st.plotly_chart(fig_predicted)
+
+    # plot = plot_graph(final_df, LOOKUP_STEP, SYMBOL)
     #st.pyplot(plot)
     st.write(f'True vs Predicted Adj Close')
     plotly_figure3 = px.line(data_frame=final_df, y=[f'true_adjclose_{LOOKUP_STEP}', f'predicted adjclose_{LOOKUP_STEP}'],
@@ -116,42 +99,21 @@ def train_model(ticker, N_STEPS, SCALE, LOOKUP_STEP, TEST_SIZE, FEATURE_COLUMNS,
     )
 
     st.write(plotly_figure3)
-    # we calculate the accuracy by counting the number of positive profits
-    accuracy_score = (len(final_df[final_df['sell_profit'] > 0]) + len(final_df[final_df['buy_profit'] > 0])) / len(
-        final_df)
-    # calculating total buy & sell profit
-    total_buy_profit = final_df["buy_profit"].sum()
-    total_sell_profit = final_df["sell_profit"].sum()
-    # total profit by adding sell & buy together
-    total_profit = total_buy_profit + total_sell_profit
-    # dividing total profit by number of testing samples (number of trades)
-    profit_per_trade = total_profit / len(final_df)
 
-    st.write('Accuracy score: (number of positive profits)', accuracy_score)
-    st.write('Total Buy Profit (if predicted future price is higher than the current, then the current price'
-             ' is substracted from the true future price): ', total_buy_profit)
-    st.write('Total sell profit (if the predicted future price is lower, then the current price '
-             'the true future price is subtracted from the current price): ', total_sell_profit)
-    st.write('Total profit', total_profit)
-    st.write('Profit per trade: ', profit_per_trade)
-    st.write('Mean Absolute Error: ',mean_absolute_error)
-    st.write('Loss: ', loss)
-    st.write('Mean Absolute Percentage Error: ', mape * 100)
-
-
-    #show future prices
-    # tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-    # today = date.today()
-    # future_price = pd.DataFrame(future_price)
-    # future_price['Date'] = pd.date_range(start=tomorrow, periods=len(future_price), freq='D')
+    st.subheader(f'{MODEL_TYPE} Model Evaluation')
+    # plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
     #
-    # future_price.rename(columns={0: 'Future Price'})
-    #
-    # future_price.plot(x='Date', y=0)
-    #
-    # plt.show()
+    # image = Image.open('model_plot.png')
+    # st.write(image)
+    st.write('Mean Absolute Percentage Error: ', MAPE)
+    st.write('MAE: ', MAE)
+    st.write('MSE: ', MSE)
+    st.write('RMSE: ', RMSE)
+    st.write('R^2: ', R2)
 
-    #actual vs predicted price
+    save_prediction_models(MODEL_TYPE, ticker, START, END, FEATURE_COLUMNS, TEST_SIZE, BATCH_SIZE, EPOCHS, DROPOUT, LOOKUP_STEP, OPTIMIZER, LOSS,
+                           '-', MAE, MSE, RMSE, R2)
+
 
 
 # Linear Regression
@@ -461,25 +423,24 @@ def streamlit_app():
         if prediction_method == 'Long Short Term Memory':
 
             sidebar.write('Select Parameters')
-            # ------------- Default Parameters -------------
-            # if "TEST_SIZE" not in sidebar.session_state:
-            #     # set the initial default value of test size
-            #     sidebar.session_state.TEST_SIZE = 0.3
-            #
-            # if "BATCH_SIZE" not in sidebar.session_state:
-            #     # set the initial default value of the training length widget
-            #     sidebar.session_state.BATCH_SIZE = 1
-            #
-            # if "EPOCHS" not in sidebar.session_state:
-            #     # set the initial default value of the training length widget
-            #     sidebar.session_state.EPOCHS = 1
-            #
-            # if "DROPOUT" not in sidebar.session_state:
-            #     # set the initial default value of horizon length widget
-            #     sidebar.session_state.DROPOUT = 0.4
-
 
             # ------------- Parameters - Choice -------------
+
+            MODEL_TYPE = sidebar.selectbox(
+                "Model Type",
+                ('Bidirectional LSTM', 'Vanilla LSTM', 'Stacked LSTM'),
+                key="MODEL_TYPE"
+            )
+            if MODEL_TYPE == 'Bidirectional LSTM':
+                N_LAYERS = sidebar.number_input(
+                    "Number of layers",
+                    min_value=2,
+                    max_value=10,
+                    key="N_LAYERS",
+                )
+            else:
+                N_LAYERS = 1
+
             DROPOUT = sidebar.number_input(
                 "Dropout (This regularization can help the model not overfit our training data)", min_value=0.1, max_value=0.5,
                 key="DROPOUT"
@@ -491,7 +452,6 @@ def streamlit_app():
                 key="TEST_SIZE",
             )
 
-
             EPOCHS = sidebar.number_input(
                 "Number of epochs",
                 min_value=1,
@@ -499,25 +459,43 @@ def streamlit_app():
             )
             BATCH_SIZE = sidebar.selectbox(
                 "Batch size",
-                (16, 32, 64, 128, 256, 512),
+                (1, 8, 16, 32, 64, 128, 256, 512),
                 key="BATCH_SIZE"
             )
+            SEQ_LENGTH = sidebar.number_input(
+                "Sequence length",
+                min_value=1,
+                max_value=150,
+                key="SEQ_LENGTH",
+            )
 
+            UNITS = sidebar.number_input(
+                "Number of units",
+                min_value=50,
+                max_value=500,
+                key="UNITS",
+            )
+            FUTURE_DAYS = sidebar.number_input(
+                "Future Days",
+                min_value=1,
+                key="FUTURE_DAYS",
+            )
             # Optimizer Selection
             optimizer = sidebar.selectbox(
                 'Select Optimizer',
-                ('adam', 'sgd', 'adamw', 'adadelta'))
+                ('adam', 'RMSProp', 'sgd', 'adadelta'))
 
             # Loss Selection
             loss = sidebar.selectbox(
                 'Select Loss',
                 ('mean_squared_error', 'huber_loss'))
 
-            FUTURE_DAYS = sidebar.number_input(
-                "Future Days",
-                min_value=1,
-                key="FUTURE_DAYS",
-            )
+            # Optimizer Activation
+            ACTIVATION = sidebar.selectbox(
+                'Select activation',
+                ('linear', 'relu'))
+
+
 
             submit = sidebar.button('Train Model')
             if submit:
@@ -527,7 +505,7 @@ def streamlit_app():
 
                 st.write(data[['Date', 'Close', 'Open', 'Low', 'High', 'Volume', 'Adj Close']])
                 FEATURE_COLUMNS = ["adjclose", "volume", "open", "high", "low"]
-                train_model(SYMBOL, 20, True, FUTURE_DAYS, TEST_SIZE, FEATURE_COLUMNS, loss, optimizer, DROPOUT, BATCH_SIZE, EPOCHS, START, END, SYMBOL)
+                train_model(SYMBOL, FUTURE_DAYS, True, SEQ_LENGTH, TEST_SIZE, FEATURE_COLUMNS, loss, optimizer, DROPOUT, BATCH_SIZE, EPOCHS, START, END, MODEL_TYPE, int(N_LAYERS), ACTIVATION, UNITS)
                     #prepare train test
                     #test_train_LSTM(data, TEST_SIZE, EPOCHS, BATCH_SIZE, optimizer, loss, SYMBOL)
 
