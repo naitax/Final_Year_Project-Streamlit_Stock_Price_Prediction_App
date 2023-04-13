@@ -46,19 +46,19 @@ class Stock:
         #         data = data[["date", 'Close']]
         return data
 
-    def ticker(self):
+    def ticker(self) -> str:
 
         df_ticker = yf.Ticker(self.symbol)
         return df_ticker
 
-    def stock_information(self):
+    def stock_information(self) -> list:
 
         ticker = self.ticker()
         history_1mo = ticker.history(period='1mo')
         splits = ticker.splits
         return history_1mo, splits
 
-    def calculate_volatility(self, data):
+    def calculate_volatility(self, data) -> float:
 
         # create a column called Log returns with the daily log return of the Close price.
         data['Log returns'] = np.log(data['Close'] / data['Close'].shift())
@@ -100,7 +100,7 @@ class Stock:
         return fig
 
     #decomposition of time series
-    def decompose_time_series(self, data, feature):
+    def decompose_time_series(self, data, feature) -> list:
         """
         A function that returns the trend, seasonality and residual captured by applying both multiplicative and
         additive model.

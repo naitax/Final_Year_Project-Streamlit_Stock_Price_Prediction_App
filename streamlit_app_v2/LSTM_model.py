@@ -27,47 +27,6 @@ np.random.seed(314)
 tf.random.set_seed(314)
 random.seed(314)
 
-'''
-Preparing the dataset
-
-This function accepts several arguments to be as flexible as possible:
-
-The ticker argument is the ticker we want to load. For instance, 
-we can use TSLA for the Tesla stock market, AAPL for Apple, and so on. 
-It can also be a pandas Dataframe with the condition it includes the columns in feature_columns and date as an index.
-
-n_steps integer indicates the historical sequence length we want to use (some people call it the window size), 
-choosing 50 means that we will use 50 days of stock prices to predict the next lookup time step.
-
-scale is a boolean variable that indicates whether to scale prices from 0 to 1; 
-we will set this to True as scaling high values from 0 to 1 will help the neural network to learn much faster and more effectively.
-
-lookup_step is the future lookup step to predict, 
-the default is set to 1 (e.g., next day). 15 means the next 15 days, and so on.
-
-split_by_date is a boolean that indicates whether we split our 
-training and testing sets by date. Setting it to False means we 
-randomly split the data into training and testing using sklearn's 
-train_test_split() function. If it's True (the default), we split the data in date order.
-
-We will use all the features available in this dataset: open, high, low, volume, and adjusted close.
-
-The function does the following:
-
-First, it loads the dataset using stock_info.get_data() 
-function in yahoo_fin module. It adds the "date" column 
-from the index if it doesn't exist, this will help later 
-to get the features of the testing set. If the scale argument 
-is passed as True, it will scale all the prices from 0 to 1 
-(including the volume) using sklearn's MinMaxScaler class. 
-Note that each column has its own scaler.
-It then adds the future column, which indicates the target 
-values (the labels to predict, or the y's) by shifting the
-adjusted close column by lookup_step.After that, it shuffles 
-and splits the data into training and testing sets and 
-finally returns the result.
-'''
-
 def shuffle_in_unison(a, b):
     # shuffle two arrays in the same way
     state = np.random.get_state()
@@ -343,7 +302,7 @@ def train_model(ticker, N_STEPS, SCALE, LOOKUP_STEP, TEST_SIZE, FEATURE_COLUMNS,
     # train the model and save the weights whenever we see
     # a new optimal model using ModelCheckpoint
     history = model.fit(data["X_train"], data["y_train"],
-                        batch_size=BATCH_SIZE,
+                        batch_si6ze=BATCH_SIZE,
                         epochs=EPOCHS,
                         validation_data=(data["X_test"], data["y_test"]),
                         verbose=1)

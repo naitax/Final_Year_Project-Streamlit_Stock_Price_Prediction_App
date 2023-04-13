@@ -282,16 +282,16 @@ def prediction_plot(prediction_data, test_data, symbol):
 
 # --------------------- Main - Layour and Title ---------------------
 
-def linear_regression_tab(data, test_size, symbol):
+def linear_regression_tab(data, test_size, symbol, feature, start, end):
 
 
-    lr = Linear_Regression(data, test_size)
-    model, X_test, y_test = lr.linear_regression_model()
+    lr = Linear_Regression(data, test_size, feature)
+    model, X_test, y_test, y_pred = lr.linear_regression_model(feature)
     intercept, mea, mse, rmse, r2 = lr.model_evaluation(model, y_test, X_test)
     st.success("Your Model is Trained Succesfully!")
     st.markdown('')
     st.write(f"Predicted Price vs Actual Close Price Data for {symbol}")
-    st.write(lr.prediction_data(model))
+    st.write(lr.prediction_data(model, feature))
     st.write(f"Model Performance for {symbol}")
     # fig1 = lr.show_model_performance(model, X_test, y_test)
     # st.write(fig1)
@@ -299,16 +299,20 @@ def linear_regression_tab(data, test_size, symbol):
     # fig2 = lr.show_predicted_vs_actual(model, X_test, y_test)
     # st.write(fig2)
 
-    pred_data = lr.prediction_data(model)
+    pred_data = lr.prediction_data(model, feature)
     # Plotting the Graph
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=pred_data['Date'], y=pred_data['Close'], mode='lines', name='Close'))
-    fig.add_trace(go.Scatter(x=pred_data['Date'], y=pred_data['Prediction'], mode='lines', name='Predicted'))
-    fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01), height=550, width=800,
-                      autosize=False, margin=dict(l=25, r=75, b=100, t=0))
+    st.write('Linear Regression | Actual vs Predicted Price')
+    line_fig = lr.show_predicted_vs_actual(pred_data, feature)
+    # fig = go.Figure()
+    # fig.add_trace(go.Scatter(x=pred_data['Date'], y=pred_data['Close'], mode='lines', name='Close'))
+    # fig.add_trace(go.Scatter(x=pred_data['Date'], y=pred_data['Prediction'], mode='lines', name='Predicted'))
+    # fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01), height=550, width=800,
+    #                   autosize=False, margin=dict(l=25, r=75, b=100, t=0))
 
-    st.plotly_chart(fig)
+    st.plotly_chart(line_fig)
 
+    scatter_fig = lr.show_scatter_predicted_vs_actual(y_test, y_pred)
+    st.plotly_chart(scatter_fig)
     st.markdown('')
     st.write('Model evaluation')
     #st.write('Slope: ', slope)
@@ -317,6 +321,8 @@ def linear_regression_tab(data, test_size, symbol):
     st.write('Mean Squared Error: ', mse)
     st.write('Root Mean Squared Error: ', rmse)
     st.write('R2:', r2)
+
+    save_prediction_models('Linear Regression', symbol, start, end, feature, test_size, intercept, mea, mse, rmse, r2)
 
 
 
@@ -337,8 +343,8 @@ def streamlit_app():
     YESTERDAY = get_yesterday()
     DEFAULT_START=YESTERDAY - dt.timedelta(days=700)
     DEFAULT_START = nearest_business_day(DEFAULT_START)
-    START = sub_columns[0].date_input("From")
-    END = sub_columns[1].date_input("To")
+    START = sub_columns[0].date_input('From', min_value=datetime.datetime(2010, 1, 1))
+    END = sub_columns[1].date_input('To', max_value=TODAY)
 
     if START == '':
         START = DEFAULT_START
@@ -352,194 +358,206 @@ def streamlit_app():
     #  ------------------------Tabs--------------------
     plot, stock_data, stock_info, stock_analysis = st.tabs(['Plot', 'Stock Data', 'Stock Information', 'Stock Analysis'])
 
-    with plot:
+    if check_if_today_greater(END, TODAY) is True or check_if_today_greater(START, END) is True:
+        st.warning('Please select a date range with end date not greater than today and start date not greater than end date')
 
-        #  ------------------------Plot stock linechart--------------------
-        chart_width = st.expander(label='chart width').slider('', 1000, 2800, 1400)
-        fig=go.Figure()
-        stock = Stock(symbol=SYMBOL)
-        data = stock.load_data(START, END, inplace=True)
-        numeric_cols = ['Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume']
-        features_selected = sidebar.multiselect('Features to Plot', numeric_cols, default=['Open'])
-        try:
-            fig = stock.plot_multiple(data, choice=features_selected)
-            # #fig2 = stock.plot_high_low(fig)
-            # #styling for plotly
-            fig.update_layout(
-                        width=chart_width,
-                        margin=dict(l=0, r=0, t=0, b=0, pad=0),
-                        legend=dict(
-                            x=0,
-                            y=0.99,
-                            traceorder="normal",
-                            font=dict(size=12),
-                        ),
-                        autosize=False,
-                template="plotly_dark",
+    else:
+        with plot:
+
+            #  ------------------------Plot stock linechart--------------------
+            chart_width = st.expander(label='chart width').slider('', 1000, 2800, 1400)
+            fig=go.Figure()
+            stock = Stock(symbol=SYMBOL)
+            data = stock.load_data(START, END, inplace=True)
+            numeric_cols = ['Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume']
+            features_selected = sidebar.multiselect('Features to Plot', numeric_cols, default=['Open'])
+            try:
+                fig = stock.plot_multiple(data, choice=features_selected)
+                # #fig2 = stock.plot_high_low(fig)
+                # #styling for plotly
+                fig.update_layout(
+                            width=chart_width,
+                            margin=dict(l=0, r=0, t=0, b=0, pad=0),
+                            legend=dict(
+                                x=0,
+                                y=0.99,
+                                traceorder="normal",
+                                font=dict(size=12),
+                            ),
+                            autosize=False,
+                    template="plotly_dark",
+                )
+
+                st.write(fig)
+            except ValueError:
+                st.error('Please select a date range')
+                #st.markdown(':red[Please select a **date range**]')
+
+        with stock_data:
+            try:
+                show_data_table(data, START)
+                st.markdown(f'**{SYMBOL} Summary**')
+                st.write(data.describe())
+            except:
+                st.write('')
+
+
+        with stock_info:
+            history_1mo= stock.stock_information()[0]
+            splits = stock.stock_information()[1]
+            ticker = stock.ticker()
+            major_holders = ticker.major_holders
+            major_holders.rename(columns={0: 'Percentage', 1: 'Holders'}, inplace=True)
+            st.write('Company History in the past 1 month', history_1mo)
+            st.markdown('**Holders**')
+            st.write(f'Major Holders' ,major_holders)
+            st.write(f'Institutional Holders' ,ticker.institutional_holders)
+            st.write(f'Mutual Holders' ,ticker.mutualfund_holders)
+            st.markdown('**Earnings**')
+            st.write(f'Earnings Dates' ,ticker.earnings_dates)
+
+        with stock_analysis:
+
+            try:
+
+                st.subheader(f'{SYMBOL} Stock Correlation')
+
+                st.write(stock.visualise_correlation(data))
+
+                st.subheader(f'{SYMBOL} Stock Volatility')
+                volatility = stock.calculate_volatility(data)
+                volatility_fig = stock.visualise_volatility(data, volatility, SYMBOL)
+                st.plotly_chart(volatility_fig, use_container_width=True, height=800)
+                #st.write(volatility_fig)
+
+                st.subheader(f'Decomposition of time series')
+                for feature in features_selected:
+                    multiplicative, additive = stock.decompose_time_series(data, feature)
+                    additive_fig = stock.plot_seasonal_decompose(additive, data, data['Date'], 'Additive', feature)
+                    st.write(f'{feature} Additive Seasonal Decomposition')
+                    st.plotly_chart(additive_fig, use_container_width=True)
+                    #st.write(additive_fig)
+                    additive_table = stock.additive_decomposing_table(additive)
+                    st.write(f'Additive {SYMBOL} Table Decomposition')
+                    st.write(additive_table)
+                    multiplicative_fig = stock.plot_seasonal_decompose(multiplicative, data, data['Date'], 'Multiplicative', feature)
+                    st.write(f'{feature} Multiplicative Seasonal Decomposition')
+                    st.plotly_chart(multiplicative_fig, use_container_width=True)
+                    #st.write(multiplicative_fig)
+            except ValueError:
+                st.error('Please select a date range')
+                #st.markdown(':red[Please select a **date range**]')
+
+
+
+
+        # Preediction method selection
+
+        sidebar.markdown('## Stock Prediction')
+        prediction_method = sidebar.selectbox(
+            'Select Prediction Method',
+            ('Long Short Term Memory', 'Linear Regression'))
+
+        if prediction_method == 'Long Short Term Memory':
+
+            sidebar.write('Select Parameters')
+            # ------------- Default Parameters -------------
+            # if "TEST_SIZE" not in sidebar.session_state:
+            #     # set the initial default value of test size
+            #     sidebar.session_state.TEST_SIZE = 0.3
+            #
+            # if "BATCH_SIZE" not in sidebar.session_state:
+            #     # set the initial default value of the training length widget
+            #     sidebar.session_state.BATCH_SIZE = 1
+            #
+            # if "EPOCHS" not in sidebar.session_state:
+            #     # set the initial default value of the training length widget
+            #     sidebar.session_state.EPOCHS = 1
+            #
+            # if "DROPOUT" not in sidebar.session_state:
+            #     # set the initial default value of horizon length widget
+            #     sidebar.session_state.DROPOUT = 0.4
+
+
+            # ------------- Parameters - Choice -------------
+            DROPOUT = sidebar.number_input(
+                "Dropout (This regularization can help the model not overfit our training data)", min_value=0.1, max_value=0.5,
+                key="DROPOUT"
+            )
+            TEST_SIZE = sidebar.number_input(
+                "The testing set rate, e.g  0.2 means 20% of the total dataset",
+                min_value=0.1,
+                max_value=0.9,
+                key="TEST_SIZE",
             )
 
-            st.write(fig)
-        except ValueError:
-            st.markdown(':red[Please select a **date range**]')
 
-    with stock_data:
-        try:
-            show_data_table(data, START)
-            st.markdown(f'**{SYMBOL} Summary**')
-            st.write(data.describe())
-        except:
-            st.write('')
+            EPOCHS = sidebar.number_input(
+                "Number of epochs",
+                min_value=1,
+                key="EPOCHS",
+            )
+            BATCH_SIZE = sidebar.selectbox(
+                "Batch size",
+                (16, 32, 64, 128, 256, 512),
+                key="BATCH_SIZE"
+            )
 
+            # Optimizer Selection
+            optimizer = sidebar.selectbox(
+                'Select Optimizer',
+                ('adam', 'sgd', 'adamw', 'adadelta'))
 
-    with stock_info:
-        history_1mo= stock.stock_information()[0]
-        splits = stock.stock_information()[1]
-        ticker = stock.ticker()
-        major_holders = ticker.major_holders
-        major_holders.rename(columns={0: 'Percentage', 1: 'Holders'}, inplace=True)
-        st.write('Company History in the past 1 month', history_1mo)
-        st.markdown('**Holders**')
-        st.write(f'Major Holders' ,major_holders)
-        st.write(f'Institutional Holders' ,ticker.institutional_holders)
-        st.write(f'Mutual Holders' ,ticker.mutualfund_holders)
-        st.markdown('**Earnings**')
-        st.write(f'Earnings Dates' ,ticker.earnings_dates)
+            # Loss Selection
+            loss = sidebar.selectbox(
+                'Select Loss',
+                ('mean_squared_error', 'huber_loss'))
 
-    with stock_analysis:
+            FUTURE_DAYS = sidebar.number_input(
+                "Future Days",
+                min_value=1,
+                key="FUTURE_DAYS",
+            )
 
-        try:
+            submit = sidebar.button('Train Model')
+            if submit:
+                st.write(f'**Dataset for Training ({START} - {END}**)')
+                data = data.reset_index()
+                data['Date'] = pd.to_datetime(data['Date']).dt.date
 
-            st.subheader(f'{SYMBOL} Stock Correlation')
+                st.write(data[['Date', 'Close', 'Open', 'Low', 'High', 'Volume', 'Adj Close']])
+                FEATURE_COLUMNS = ["adjclose", "volume", "open", "high", "low"]
+                train_model(SYMBOL, 20, True, FUTURE_DAYS, TEST_SIZE, FEATURE_COLUMNS, loss, optimizer, DROPOUT, BATCH_SIZE, EPOCHS, START, END, SYMBOL)
+                    #prepare train test
+                    #test_train_LSTM(data, TEST_SIZE, EPOCHS, BATCH_SIZE, optimizer, loss, SYMBOL)
 
-            st.write(stock.visualise_correlation(data))
+        elif prediction_method == 'Linear Regression':
 
-            st.subheader(f'{SYMBOL} Stock Volatility')
-            volatility = stock.calculate_volatility(data)
-            volatility_fig = stock.visualise_volatility(data, volatility, SYMBOL)
-            st.plotly_chart(volatility_fig, use_container_width=True, height=800)
-            #st.write(volatility_fig)
+            sidebar.write('Select Parameters')
+            TEST_SIZE = sidebar.number_input(
+                "The testing set rate, e.g  0.2 means 20% of the total dataset",
+                min_value=0.1,
+                max_value=0.9,
+                key="TEST_SIZE",
+            )
 
-            st.subheader(f'Decomposition of time series')
-            for feature in features_selected:
-                multiplicative, additive = stock.decompose_time_series(data, feature)
-                additive_fig = stock.plot_seasonal_decompose(additive, data, data['Date'], 'Additive', feature)
-                st.write(f'{feature} Additive Seasonal Decomposition')
-                st.plotly_chart(additive_fig, use_container_width=True)
-                #st.write(additive_fig)
-                additive_table = stock.additive_decomposing_table(additive)
-                st.write(f'Additive {SYMBOL} Table Decomposition')
-                st.write(additive_table)
-                multiplicative_fig = stock.plot_seasonal_decompose(multiplicative, data, data['Date'], 'Multiplicative', feature)
-                st.write(f'{feature} Multiplicative Seasonal Decomposition')
-                st.plotly_chart(multiplicative_fig, use_container_width=True)
-                #st.write(multiplicative_fig)
-        except ValueError:
-            st.markdown(':red[Please select a **date range**]')
+            # Feature Selection
+            feature = sidebar.selectbox(
+                'Select Feature to train model on',
+                ('Close', 'Open', 'Low', 'High', 'Volume', 'Adj Close'))
+            submit = sidebar.button('Train Model')
+            if submit:
+                st.write(f'**Dataset for Training ({START} - {END}**)')
+                data = data.reset_index()
+                data['Date'] = pd.to_datetime(data['Date']).dt.date
+                st.write(data[['Date', 'Close', 'Open', 'Low', 'High', 'Volume', 'Adj Close']])
+                data = data.set_index('Date')
 
-
-
-    # Preediction method selection
-
-    sidebar.markdown('## Stock Prediction')
-    prediction_method = sidebar.selectbox(
-        'Select Prediction Method',
-        ('Long Short Term Memory', 'Linear Regression'))
-
-    if prediction_method == 'Long Short Term Memory':
-
-        sidebar.write('Select Parameters')
-        # ------------- Default Parameters -------------
-        # if "TEST_SIZE" not in sidebar.session_state:
-        #     # set the initial default value of test size
-        #     sidebar.session_state.TEST_SIZE = 0.3
-        #
-        # if "BATCH_SIZE" not in sidebar.session_state:
-        #     # set the initial default value of the training length widget
-        #     sidebar.session_state.BATCH_SIZE = 1
-        #
-        # if "EPOCHS" not in sidebar.session_state:
-        #     # set the initial default value of the training length widget
-        #     sidebar.session_state.EPOCHS = 1
-        #
-        # if "DROPOUT" not in sidebar.session_state:
-        #     # set the initial default value of horizon length widget
-        #     sidebar.session_state.DROPOUT = 0.4
-
-
-        # ------------- Parameters - Choice -------------
-        DROPOUT = sidebar.number_input(
-            "Dropout (This regularization can help the model not overfit our training data)", min_value=0.1, max_value=0.5,
-            key="DROPOUT"
-        )
-        TEST_SIZE = sidebar.number_input(
-            "The testing set rate, e.g  0.2 means 20% of the total dataset",
-            min_value=0.1,
-            max_value=0.9,
-            key="TEST_SIZE",
-        )
-
-
-        EPOCHS = sidebar.number_input(
-            "Number of epochs",
-            min_value=1,
-            key="EPOCHS",
-        )
-        BATCH_SIZE = sidebar.number_input(
-            "Batch size",
-            min_value=1,
-            key="BATCH_SIZE",
-        )
-
-        # Optimizer Selection
-        optimizer = sidebar.selectbox(
-            'Select Optimizer',
-            ('adam', 'sgd', 'adamw', 'adadelta'))
-
-        # Loss Selection
-        loss = sidebar.selectbox(
-            'Select Loss',
-            ('mean_squared_error', 'huber_loss'))
-
-        FUTURE_DAYS = sidebar.number_input(
-            "Future Days",
-            min_value=1,
-            key="FUTURE_DAYS",
-        )
-
-        submit = sidebar.button('Train Model')
-        if submit:
-            st.write(f'**Dataset for Training ({START} - {END}**)')
-            data = data.reset_index()
-            data['Date'] = pd.to_datetime(data['Date']).dt.date
-
-            st.write(data[['Date', 'Close', 'Open', 'Low', 'High', 'Volume', 'Adj Close']])
-            FEATURE_COLUMNS = ["adjclose", "volume", "open", "high", "low"]
-            train_model(SYMBOL, 20, True, FUTURE_DAYS, TEST_SIZE, FEATURE_COLUMNS, loss, optimizer, DROPOUT, BATCH_SIZE, EPOCHS, START, END, SYMBOL)
-            #prepare train test
-            #test_train_LSTM(data, TEST_SIZE, EPOCHS, BATCH_SIZE, optimizer, loss, SYMBOL)
-
-    elif prediction_method == 'Linear Regression':
-
-        sidebar.write('Select Parameters')
-        TEST_SIZE = sidebar.number_input(
-            "The testing set rate, e.g  0.2 means 20% of the total dataset",
-            min_value=0.1,
-            max_value=0.9,
-            key="TEST_SIZE",
-        )
-        submit = sidebar.button('Train Model')
-        if submit:
-            st.write(f'**Dataset for Training ({START} - {END}**)')
-            data = data.reset_index()
-            data['Date'] = pd.to_datetime(data['Date']).dt.date
-            st.write(data[['Date', 'Close', 'Open', 'Low', 'High', 'Volume', 'Adj Close']])
-            data = data.set_index('Date')
-
-            linear_regression_tab(data, TEST_SIZE, SYMBOL)
-            # liner_regression_model = Linear_Regression(data, TEST_SIZE)
-            # prediction_data = liner_regression_model.create_model()
-            # test_data = liner_regression_model.create_train_test_data()[1]
-            # prediction_plot(prediction_data, test_data, SYMBOL)
+                linear_regression_tab(data, TEST_SIZE, SYMBOL, feature, START, END)
+                # liner_regression_model = Linear_Regression(data, TEST_SIZE)
+                # prediction_data = liner_regression_model.create_model()
+                # test_data = liner_regression_model.create_train_test_data()[1]
+                # prediction_plot(prediction_data, test_data, SYMBOL)
 
 
 

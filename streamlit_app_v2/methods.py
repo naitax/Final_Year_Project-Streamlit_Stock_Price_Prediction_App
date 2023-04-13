@@ -1,9 +1,20 @@
 import datetime as dt
+from datetime import date
 from stocksymbol import StockSymbol
+#creating/updating csv file
+import os.path
+import csv
+from csv import writer
+import pandas as pd
 
+
+def check_if_today_greater(date, today):
+    if date > today:
+        return True
 
 def get_today():
-    return dt.datetime.now().strftime("%Y-%m-%d")
+    #dt.datetime.now().strftime("%Y-%m-%d")
+    return date.today()
 
 def nearest_business_day(DATE):
     """
@@ -42,3 +53,25 @@ def get_all_ticker_names():
   all_ticker = sorted(all_ticker)
   return all_ticker
 
+
+def save_prediction_models(prediction_model, symbol, start, end, feature, test_size, intercept, mea, mse, rmse, r2):
+    path_to_file = 'lr_models.csv'
+    data_to_append = [prediction_model, symbol, f'{start}-{end}', feature, test_size, intercept, mea, mse, rmse, r2]
+    header_list = ['Prediction Model', 'Stock', 'Date Range', 'Feature', 'Test Size', 'intercept', 'mea', 'mse', 'rmse',
+                   'r2']
+    if os.path.exists(path_to_file) is False:
+        with open(path_to_file, 'w', newline='') as file:
+            writer = csv.writer(file)
+            dw = csv.DictWriter(file, delimiter=',', fieldnames=header_list)
+            dw.writeheader()
+            writer.writerow(data_to_append)
+    else:
+        with open(path_to_file, 'a') as file:
+            writer = csv.writer(file)
+            # writer_object = writer(file)
+            # writer_object.writerow(data_to_append)
+            writer.writerow(data_to_append)
+
+    df = pd.read_csv(path_to_file)
+    file.close()
+    return df
