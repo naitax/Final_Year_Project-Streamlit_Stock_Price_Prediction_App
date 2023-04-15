@@ -19,14 +19,6 @@ from datetime import date
 import datetime
 from stock import *
 
-'''
-random seed value while creating training and test data set. 
-The goal is to make sure we get the same training and validation 
-data set while we use different hyperparameters or 
-machine learning algorithms in order to assess the 
-performance of different models
-'''
-
 np.random.seed(314)
 tf.random.set_seed(314)
 random.seed(314)
@@ -145,13 +137,6 @@ def create_model(sequence_length, n_features, n_layers, dropout,
         model.add(LSTM(units, activation=activation))
         model.add(Dense(1))
 
-    # model = Sequential()
-    # model.add(cell(units=50, return_sequences=True, batch_input_shape=(None, sequence_length, n_features)))
-    # model.add(LSTM(units=50, return_sequences=False))
-
-    # model.add(Dense(25))
-    # model.add(Dense(1))
-
     model.compile(loss=loss, metrics=["mean_absolute_error"], optimizer=optimizer)
     return model
 
@@ -245,13 +230,6 @@ def train_model(ticker, N_STEPS, SCALE, LOOKUP_STEP, TEST_SIZE, FEATURE_COLUMNS,
     model = create_model(N_STEPS, len(FEATURE_COLUMNS), loss=LOSS, units=UNITS, cell='LSTM', n_layers=2,
                          dropout=DROPOUT, optimizer=OPTIMIZER, bidirectional=True)
 
-    # some tensorflow callbacks
-    # checkpointer = ModelCheckpoint(os.path.join("results", model_name + ".h5"), save_weights_only=True,
-    #                                save_best_only=True, verbose=1)
-    # tensorboard = TensorBoard(log_dir=os.path.join("logs", model_name))
-
-    # train the model and save the weights whenever we see
-    # a new optimal model using ModelCheckpoint
     history = model.fit(data["X_train"], data["y_train"],
                         batch_si6ze=BATCH_SIZE,
                         epochs=EPOCHS,

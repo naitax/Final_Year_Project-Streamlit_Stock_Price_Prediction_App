@@ -11,18 +11,15 @@ import pandas as pd
 from statsmodels.tsa.seasonal import DecomposeResult, seasonal_decompose
 from plotly import graph_objects as go
 
-# Add validation
-# end date cannot be later than today
-# start date cannot be earlier than 2010
+
 class Stock:
     """
     This class enables data loading, plotting and statistical analysis of a given stock,
      upon initialization load a sample of data to check if stock exists.
-
     """
 
     def __init__(self, symbol="GOOGL"):
-
+        """ Constructor """
         self.end = datetime.datetime.today()
         self.start = self.end - datetime.timedelta(days=4)
         self.symbol = symbol
@@ -30,9 +27,8 @@ class Stock:
 
     def load_data(self, start, end, inplace=False):
         """
-        takes a start and end dates, download data do some processing and returns dataframe
+        Takes a start and end dates, download data do some processing and returns dataframe
         """
-
         data = yf.download(self.symbol, start, end)
         # Check if there is data
         try:
@@ -40,14 +36,10 @@ class Stock:
         except AssertionError:
             print("Cannot fetch data, check spelling or time window")
         data.reset_index(inplace=True)
-        #         data.rename(columns={"Date": "datetime"}, inplace=True)
-        #         data["date"] = data.apply(lambda raw: raw["datetime"].date(), axis=1)
-
-        #         data = data[["date", 'Close']]
         return data
 
     def ticker(self) -> str:
-
+        """Retrives stock ticker, needed to get stock information from yfinance"""
         df_ticker = yf.Ticker(self.symbol)
         return df_ticker
 
@@ -60,25 +52,19 @@ class Stock:
 
     def calculate_volatility(self, data) -> float:
 
-        # create a column called Log returns with the daily log return of the Close price.
+        """
+        Following steps happen:
+        1. Create a column called Log returns with the daily log return of the Close price.
+        2. Get standard deviation.
+        3. Calculate volatility
+        """
+
         data['Log returns'] = np.log(data['Close'] / data['Close'].shift())
-
-        # get standard deviation
         std = data['Log returns'].std()
-
-        # calculate volatility
         volatility = std * 252 ** .5
 
         return volatility
 
-    # def visualise_volatility(self, data, volatility, symbol):
-    #
-    #     str_vol = str(round(volatility, 4) * 100)
-    #     fig, ax = plt.subplots()
-    #     data['Log returns'].hist(ax=ax, bins=50, alpha=0.6, color='b')
-    #     ax.set_xlabel('Log return')
-    #     ax.set_ylabel('Freq of log return')
-    #     ax.set_title(f'{symbol} volatility: {str_vol} %')
     def visualise_volatility(self, data, volatility, symbol):
 
         str_vol = str(round(volatility, 4) * 100)
@@ -159,6 +145,9 @@ class Stock:
 
     def additive_decomposing_table(self, result_additive):
 
+        """
+        Creating time series decomposing table
+        """
         # table can be only created with additive
         df_reconstructed = pd.concat(
             [result_additive.seasonal, result_additive.trend, result_additive.resid, result_additive.observed], axis=1)
@@ -170,14 +159,6 @@ class Stock:
         df_reconstructed['Sum of seas, trend and resid'] = df_reconstructed[temp_list].sum(axis=1)
 
         return df_reconstructed
-
-# e.g
-# symbol = 'AAPL'
-# stock = Stock(symbol)
-# data = stock.load_data('2015-03-01', '2022-01-01')
-# volatility = stock.calculate_volatility(data)
-# stock.visualise_volatility(data, volatility, symbol)
-
 
     def plot_row_data(self, fig, start, end):
         """
@@ -198,14 +179,7 @@ class Stock:
                 ])
             )
         )
-        #         fig = fig.add_trace(
-        #             go.Scatter(
-        #                 x=self.data.date,
-        #                 y=self.data['Close'],
-        #                 mode="lines",
-        #                 name=self.symbol,
-        #             )
-        #         )
+
         return figure
 
     def plot_multiple(self, data, choice='Open'):
@@ -217,18 +191,6 @@ class Stock:
 
         plotly_figure = px.line(data_frame=cust_data, x=data['Date'], y=choice,
                                 title=f'')
-
-        # plotly_figure.update_xaxes(
-        #     rangeselector=dict(
-        #         buttons=list([
-        #             dict(count=1, label="1m", step="month", stepmode="backward"),
-        #             dict(count=6, label="6m", step="month", stepmode="backward"),
-        #             dict(count=3, label="3m", step="month", stepmode="backward"),
-        #             dict(count=1, label="1y", step="year", stepmode="backward"),
-        #             dict(step="all")
-        #         ])
-        #     )
-        # )
 
         """
         Add date range slider
