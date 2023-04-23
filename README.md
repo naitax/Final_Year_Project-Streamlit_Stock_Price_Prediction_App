@@ -13,7 +13,7 @@ A web based Streamlit application to predict stock values and compare prediction
 
 ## Steps to run the code:
 1. Clone the github
- $git clone 
+ $git clone https://github.com/naitax/Final_Year_Project-Streamlit_Stock_Price_Prediction_App.git
 2. Install missing libraries if needed (numpy, pandas, streamlit, plotly, datetime, math, sklearn, keras, tensorflow, seaborn, random, yfinance)
 3. Go to the folder: stock_price_prediction_app
  $cd ./stock_price_prediction_app/
