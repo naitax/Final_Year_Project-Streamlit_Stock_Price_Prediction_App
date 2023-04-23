@@ -28,9 +28,6 @@ def show_data_table(data, start_date):
     # data = data.set_index(pd.DatetimeIndex(data['Date'].values))
     st.write(data.iloc[start_row:, :])
 
-
-
-
 # LSTM
 def train_model(ticker, N_STEPS, SCALE, LOOKUP_STEP, TEST_SIZE, FEATURE_COLUMNS, LOSS, OPTIMIZER, DROPOUT, BATCH_SIZE, EPOCHS, START, END, MODEL_TYPE, N_LAYERS, ACTIVATION, UNITS):
 
@@ -47,7 +44,7 @@ def train_model(ticker, N_STEPS, SCALE, LOOKUP_STEP, TEST_SIZE, FEATURE_COLUMNS,
                         verbose=1)
 
     model.save(
-        f'streamlit_app_v2/prediction_models/model_type={MODEL_TYPE},batch_size={BATCH_SIZE},epochs={EPOCHS},dropout={DROPOUT},seq_length={LOOKUP_STEP},optimizer={OPTIMIZER},loss={LOSS}.h5')
+        f'saved_files/prediction_models/model_type={MODEL_TYPE},batch_size={BATCH_SIZE},epochs={EPOCHS},dropout={DROPOUT},seq_length={LOOKUP_STEP},optimizer={OPTIMIZER},loss={LOSS}.h5')
 
     # final dataframe
     final_df = get_final_df(model, data, LOOKUP_STEP)
@@ -147,7 +144,7 @@ def linear_regression_tab(data, test_size, symbol, feature, start, end):
                            '-', '-', '-', intercept, mae, mse, rmse, r2)
 
     model.save(
-        f'streamlit_app_v2/prediction_models/model_type=Linear_Regression,test_size={test_size},stock={symbol},start={start},end={end},feature={feature}.h5')
+        f'saved_files/prediction_models/model_type=Linear_Regression,test_size={test_size},stock={symbol},start={start},end={end},feature={feature}.h5')
 
 # --------------------- Main - Layour and Title ---------------------
 

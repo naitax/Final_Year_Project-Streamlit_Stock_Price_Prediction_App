@@ -1,7 +1,6 @@
 import yfinance as yf
 import datetime
 import plotly.express as px
-
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -187,11 +186,8 @@ class Stock:
         df_ticker = self.ticker()
         numeric_df = data.select_dtypes(['float', 'int'])
         cust_data = data[choice]
-
-
         plotly_figure = px.line(data_frame=cust_data, x=data['Date'], y=choice,
                                 title=f'')
-
         """
         Add date range slider
         """
@@ -225,3 +221,12 @@ class Stock:
             )
         )
         return plotly_figure
+
+
+
+
+
+
+
+
+

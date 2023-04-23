@@ -55,7 +55,7 @@ def get_all_ticker_names():
 
 
 def save_prediction_models(prediction_model, symbol, start, end, feature, test_size, batch_size, epochs, dropout, lookup_step, optimizer, loss, intercept, MAE, MSE, RMSE, R2):
-    path_to_file = 'hyperparameters.csv'
+    path_to_file = 'saved_files/hyperparameters.csv'
 
 
     data_to_append = [prediction_model, symbol, f'{start}-{end}', feature, test_size, batch_size, epochs, dropout, lookup_step, optimizer, loss, intercept, MAE, MSE, RMSE, R2]
